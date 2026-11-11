@@ -1,0 +1,25 @@
+name: macOS build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version && sw_vers && uname -m
+      - name: Build (release)
+        run: swift build -c release
+      - name: Unit tests
+        run: swift test
+      - name: Package app bundle (no launch)
+        run: SNAPPER_APP_DIR="$RUNNER_TEMP/apps" SNAPPER_NO_OPEN=1 ./install.sh
+      - name: Inspect bundle
+        run: |
+          ls -la "$RUNNER_TEMP/apps/Snapper.app/Contents" "$RUNNER_TEMP/apps/Snapper.app/Contents/MacOS" "$RUNNER_TEMP/apps/Snapper.app/Contents/Resources"
+          plutil -lint "$RUNNER_TEMP/apps/Snapper.app/Contents/Info.plist"
+          codesign -dv "$RUNNER_TEMP/apps/Snapper.app" 2>&1 || true
+          "$RUNNER_TEMP/apps/Snapper.app/Contents/MacOS/Snapper" --version
